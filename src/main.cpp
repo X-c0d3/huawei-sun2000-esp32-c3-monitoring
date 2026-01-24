@@ -45,7 +45,7 @@ void event(const char* payload, size_t length) {
 }
 
 uint16_t hexToRGB565(const char* hex) {
-    uint32_t rgb = strtoul(hex + 1, NULL, 16);  // ข้าม '#'
+    uint32_t rgb = strtoul(hex + 1, NULL, 16);
     uint8_t r = (rgb >> 16) & 0xFF;
     uint8_t g = (rgb >> 8) & 0xFF;
     uint8_t b = rgb & 0xFF;
@@ -221,7 +221,6 @@ void setup() {
         esp_task_wdt_init(WDT_TIMEOUT, true);  // true = reset chip
         esp_task_wdt_add(NULL);
     }
-    // timer.every(2000, getDeviceInfo);
 }
 
 void loop() {
