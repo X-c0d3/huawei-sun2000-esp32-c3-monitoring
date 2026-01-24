@@ -86,7 +86,7 @@ class HuaweiSun2000Client {
     }
     InverterData getDeviceInfo() {
         InverterData data;
-
+        data.ip = WiFi.localIP().toString();
         data.model = parseRegisterString(30000, 15);
         data.serialNo = parseRegisterString(30015, 10);
         data.inverterPowerRate = parseRegisterValue(30073, 2, 1000.0f);

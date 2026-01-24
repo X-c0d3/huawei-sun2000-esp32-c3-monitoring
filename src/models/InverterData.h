@@ -14,6 +14,7 @@
 
 class InverterData {
    public:
+    String ip;
     String model;
     String serialNo;
     float inverterPowerRate;
@@ -46,6 +47,7 @@ class InverterData {
     float pv3_current;
 
     void toJson(JsonObject obj) const {
+        obj["ip"] = ip;
         obj["model"] = model;
         obj["serialNo"] = serialNo;
         obj["inverterPowerRate"] = inverterPowerRate;

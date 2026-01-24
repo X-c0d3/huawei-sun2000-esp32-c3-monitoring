@@ -106,14 +106,31 @@ void drawFixedText(TFT_eSPI& tft, int x, int y,
                    String text,
                    uint16_t textColor,
                    uint16_t bgColor,
-                   uint8_t fontSize) {
+                   uint8_t fontSize,
+                   uint8_t align = MC_DATUM) {
     tft.fillRect(x, y, width, height, bgColor);
     //  ตั้งค่าฟอนต์
     tft.setTextFont(fontSize);
     tft.setTextColor(textColor, bgColor);
 
-    tft.setCursor(x, y);
-    tft.print(text);
+    tft.setTextDatum(align);
+    int drawX;
+    int drawY = y + (height / 2);
+
+    switch (align) {
+        case ML_DATUM:
+            drawX = x + 4;
+            break;
+        case MR_DATUM:
+            drawX = x + width - 4;
+            break;
+        case MC_DATUM:
+        default:
+            drawX = x + (width / 2);
+            break;
+    }
+
+    tft.drawString(text, drawX, drawY);
 }
 
 void drawStatus(TFT_eSPI tft, int x, int y, bool status) {
