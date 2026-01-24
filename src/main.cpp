@@ -68,7 +68,6 @@ void drawDashboard(InverterData obj) {
         tft.setTextColor(TFT_GREENYELLOW);
         tft.setCursor(10, 50);
         tft.print("PV1");
-        // 4f5666
         drawFixedText(tft, 10, 60, 135, 10,
                       String(obj.pv1_voltage, 0) + "V / " + String(obj.pv1_current, 1) + "A / ~" + String(obj.pv1_voltage * obj.pv1_current, 0) + " W",
                       TFT_PINK, hexToRGB565("#2a3342"), 1, ML_DATUM);
@@ -94,6 +93,7 @@ void drawDashboard(InverterData obj) {
 
     tft.setTextColor(TFT_BLACK);
     tft.drawString(obj.model.c_str(), 138, 170);
+    tft.drawString("v" + String(VERSION), 440, 10);
 
     tft.setTextColor(TFT_GREENYELLOW);
     tft.setCursor(165, 220);
@@ -108,7 +108,7 @@ void drawDashboard(InverterData obj) {
 
     drawFixedText(tft, 360, 160, 120, 10, "Active Power: " + String(obj.activePower) + " kWh", TFT_YELLOW, hexToRGB565("#a8a9ab"), 1, MR_DATUM);
     drawFixedText(tft, 360, 170, 120, 10, "Grid: " + String(obj.gridVolt, 0) + " V | " + String(obj.gridFrequency, 0) + " Hz", TFT_WHITE, hexToRGB565("#a8a9ab"), 1, MR_DATUM);
-    drawFixedText(tft, 360, 180, 120, 10, String(obj.gridCurrent, 0) + " A | ~" + String(obj.gridVolt * obj.gridCurrent, 0) + " W", TFT_WHITE, hexToRGB565("#a8a9ab"), 1, MR_DATUM);
+    drawFixedText(tft, 360, 180, 120, 10, String(obj.gridCurrent, 2) + " A | ~" + String(obj.gridVolt * obj.gridCurrent, 0) + " W", TFT_WHITE, hexToRGB565("#a8a9ab"), 1, MR_DATUM);
     drawFixedText(tft, 360, 190, 120, 10, "Power factor: " + String(obj.gridPowerFactor, 2), TFT_YELLOW, hexToRGB565("#a8a9ab"), 1, MR_DATUM);
 
     tft.setTextColor(TFT_GREENYELLOW);
@@ -192,6 +192,12 @@ void setup() {
     tft.fillScreen(TFT_TRANSPARENT);
     tft.setSwapBytes(true);
 
+    // Connect WIFI
+    drawFixedText(tft, 240, 150, 40, 10, "Connecting WIFI .... ", TFT_WHITE, TFT_TRANSPARENT, 2);
+    setup_Wifi();
+    drawFixedText(tft, 240, 150, 40, 10, "Configuring the System Time Zone", TFT_WHITE, TFT_TRANSPARENT, 2);
+    setupTimeZone();
+
     TJpgDec.setCallback(jpgRender);
 
     File file = SPIFFS.open(mainLogo);
@@ -201,10 +207,6 @@ void setup() {
     }
     // Load Image
     TJpgDec.drawFsJpg(0, 0, mainLogo);
-
-    // Connect WIFI
-    setup_Wifi();
-    setupTimeZone();
 
     if (inverter.connect()) {
         Serial.println("Connected to SUN2000");

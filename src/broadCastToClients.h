@@ -21,7 +21,6 @@ void publishToSocketIO(SocketIoClient& webSocket, InverterData data) {
     root["deviceName"] = DEVICE_NAME;
     root["deviceId"] = getChipId();
     root["lastUpdated"] = NowString();
-    root["ipAddress"] = WiFi.localIP().toString();
 
     JsonObject deviceState = root.createNestedObject("deviceState");
     data.toJson(deviceState);

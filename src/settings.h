@@ -17,5 +17,6 @@
 #define ENABLE_SOCKETIO false
 #define ENABLE_DEBUG_MODE false
 #define ENABLE_LINE_NOTIFY true
+#define VERSION "1.0.4"
 
 #endif
