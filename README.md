@@ -50,8 +50,6 @@ Read data from Huawei-SUN2000 Solar Inverter via Modbus RS486 with ESP32-C3
 
 ```
 
-[![Watch the video](https://github.com/X-c0d3/huawei-sun2000-esp32-c3-monitoring/blob/main/doc/Cover.jpg)](https://www.youtube.com/watch?v=PvaOxBSYhOM)
-
 <div style="display: inline-flex; align-items: center;">
   <!-- Video Thumbnail -->
   <a href="https://www.youtube.com/watch?v=PvaOxBSYhOM" target="_blank" style="display: inline-block;">
