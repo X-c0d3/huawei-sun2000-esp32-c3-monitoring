@@ -61,11 +61,11 @@ void drawDashboard(InverterData obj) {
     tft.setTextSize(2);
     tft.setTextColor(TFT_YELLOW);
     // PV Power
-    drawFixedText(tft, 60, 20, 100, 18, formatPower(obj.pv_power * 1000, 3), TFT_BLUE, hexToRGB565("#b7d3f8"), 1);
+    drawFixedText(tft, 60, 20, 110, 18, formatPower(obj.pv_power * 1000, 3), TFT_BLUE, hexToRGB565("#b7d3f8"), 1);
     // Home Power (Load)
-    drawFixedText(tft, 280, 20, 100, 18, formatPower((obj.activePower + obj.grid_power) * 1000, 3), TFT_RED, hexToRGB565("#b7d3f8"), 1);
+    drawFixedText(tft, 280, 20, 110, 18, formatPower((obj.activePower + obj.grid_power) * 1000, 3), TFT_RED, hexToRGB565("#b7d3f8"), 1);
     // Grid Power
-    drawFixedText(tft, 260, 300, 100, 18, formatPower(obj.grid_power * 1000, 3), TFT_BLACK, hexToRGB565("#e1e2e6"), 1);
+    drawFixedText(tft, 260, 300, 110, 18, formatPower(obj.grid_power * 1000, 3), TFT_BLACK, hexToRGB565("#e1e2e6"), 1);
 
     tft.setTextSize(1);
     if (obj.pv1_voltage > 0) {
