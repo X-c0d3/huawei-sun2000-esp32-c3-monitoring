@@ -1,7 +1,3 @@
-<p float="center">
-<img src="https://github.com/X-c0d3/huawei-sun2000-esp32-c3-monitoring/blob/main/doc/Cover.jpg"  width="ุ600">
-</p>
-
 Read data from Huawei-SUN2000 Solar Inverter via Modbus RS486 with ESP32-C3
 
 ```
