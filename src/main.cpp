@@ -18,8 +18,9 @@
 #include "wifiMan.h"
 #define TX_PIN 21
 #define RX_PIN 20
+#define ESP32C3_LED 8  // Built-in LED
 
-// Config
+// Config RS485 adapter (Reader)
 #define SLAVE_ID 1
 #define BAUD_RATE 9600
 #define WDT_TIMEOUT 30
@@ -30,7 +31,10 @@ HuaweiSun2000Client inverter(hwSerial, SLAVE_ID, BAUD_RATE);
 SocketIoClient webSocket;
 
 auto timer = timer_create_default();  // create a timer with default settings
-const int ESP32C3_LED = 8;
+bool screenOn = true;
+unsigned long lastTouchTime = 0;
+const unsigned long timeout = 3 * 60 * 1000;  // 3min  Screen Sleep (Power Saving)
+
 String mainLogo = "/main-background1.jpg";
 
 // callback for drwaing JPG into TFT_eSPI
@@ -131,7 +135,7 @@ void drawDashboard(InverterData obj) {
 }
 
 bool getDeviceInfo(void*) {
-    Serial.println(" ------------------------------------------------------------------------------");
+    Serial.println(" ---------------------------------------------------------");
 
     InverterData obj = inverter.getDeviceInfo();
 
@@ -180,6 +184,8 @@ void setup() {
     Serial.begin(115200);
     hwSerial.begin(BAUD_RATE, SERIAL_8N1, RX_PIN, TX_PIN);
 
+    pinMode(TFT_BL, OUTPUT);
+    digitalWrite(TFT_BL, HIGH);  // Turn off the screen backlight
     pinMode(ESP32C3_LED, OUTPUT);
 
     if (!SPIFFS.begin(true)) {
@@ -225,12 +231,31 @@ void setup() {
 
         timer.every(2000, getDeviceInfo);
     }
+    lastTouchTime = millis();
 }
 
 void loop() {
     if (WiFi.status() == WL_CONNECTED) {
         webSocket.loop();
         esp_task_wdt_reset();
+    }
+
+    uint16_t x, y;
+    if (tft.getTouch(&x, &y)) {
+        if (!screenOn) {
+            // touch detected, turn on the screen backlight
+            digitalWrite(TFT_BL, HIGH);
+            screenOn = true;
+            Serial.println("Screen Waked Up!");
+        }
+        lastTouchTime = millis();  // reset the timer
+    }
+
+    // check if the screen has been on for X minutes
+    if (screenOn && (millis() - lastTouchTime > timeout)) {
+        digitalWrite(TFT_BL, LOW);  // Turn off the screen backlight
+        screenOn = false;
+        Serial.println("Screen Sleep (Power Saving)");
     }
 
     timer.tick();

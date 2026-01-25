@@ -207,7 +207,7 @@
 #define TFT_CS 5
 #define TFT_DC 1
 #define TFT_RST 0
-// ขา LED หรือ BL ต้องต้อเข้ากับขา 3.3V ของ MCU
+#define TFT_BL 4  // ขา LED หรือ BL สามารถต่อเข้ากับขา 3.3V ของ MCU ก็ได้เช่นกัน ถ้าหากไม่ได้มีการ control LED backlight
 
 // ถ้าต้องการใช้ toch screen ต้องต่อขาพวนี้ด้วย
 #define TOUCH_CS 3    // T_CS
