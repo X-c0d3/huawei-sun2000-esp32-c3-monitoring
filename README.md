@@ -24,7 +24,6 @@ Read data from Huawei-SUN2000 Solar Inverter via Modbus RS486 with ESP32-C3
 #define TOUCH_IRQ -1  // T_IRQ ให้ว่างไว้ (ห้ามต่อสาย)
 
 // ห้ามใช้ GPIO8 เพราะ Build-in LED จองแล้ว
-// ห้ามใช้ GPIO9 เพราะ Reset button จองแล้ว
 // --------------------------------------------------------------------------
 
 

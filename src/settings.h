@@ -2,11 +2,11 @@
 #define CONFIGS_H
 
 // config parameters
-#define DEVICE_NAME "Huawei Sun2000 with ESP32"
+#define DEVICE_NAME "Huawei SUN2000-10K-LC0"
 #define WIFI_SSID "MyWIFI_SSID"
 #define WIFI_PASSWORD "my_wifi_password"
 #define SOCKETIO_HOST "192.168.137.102"  // SocketIO host
-#define SOCKETIO_PORT 4000
+#define SOCKETIO_PORT 4000               // SocketIO port
 #define SOCKETIO_CHANNEL "ESP"
 
 // Line config
@@ -14,9 +14,11 @@
 #define DEFAULT_BAUD_RATE 115200
 #define API_TIMEOUT 3000
 #define ELECTRICITY_PRICE 5.5
-#define ENABLE_SOCKETIO false
+#define ENABLE_SOCKETIO true
 #define ENABLE_DEBUG_MODE false
 #define ENABLE_LINE_NOTIFY true
-#define VERSION "1.0.4"
+
+#define FIRMWARE_VERSION "1.0.5"
+#define FIRMWARE_LASTUPDATE "2026-01-03"
 
 #endif

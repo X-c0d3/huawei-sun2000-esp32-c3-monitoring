@@ -14,13 +14,18 @@
 #include "lineNotify.h"
 #include "settings.h"
 #include "utility.h"
+#include "wifiMan.h"
 
 void publishToSocketIO(SocketIoClient& webSocket, InverterData data) {
     // https://arduinojson.org/v6/assistant/
     StaticJsonDocument<1024> root;
     root["deviceName"] = DEVICE_NAME;
     root["deviceId"] = getChipId();
-    root["lastUpdated"] = NowString();
+    root["lastUpdated"] = DateNowString();
+    root["ipAddress"] = WiFi.localIP().toString();
+    root["wifiSignal"] = wifiSignal();
+    root["firmware_version"] = String(FIRMWARE_VERSION);
+    root["firmware_lastupdate"] = String(FIRMWARE_LASTUPDATE);
 
     JsonObject deviceState = root.createNestedObject("deviceState");
     data.toJson(deviceState);

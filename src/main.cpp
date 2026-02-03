@@ -97,7 +97,7 @@ void drawDashboard(InverterData obj) {
 
     tft.setTextColor(TFT_BLACK);
     tft.drawString(obj.model.c_str(), 138, 170);
-    tft.drawString("v" + String(VERSION), 440, 10);
+    tft.drawString("v" + String(FIRMWARE_VERSION), 440, 10);
 
     tft.setTextColor(TFT_GREENYELLOW);
     tft.setCursor(165, 220);

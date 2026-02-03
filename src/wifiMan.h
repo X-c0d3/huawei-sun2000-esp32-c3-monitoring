@@ -88,7 +88,7 @@ long wifiSignal() {
     if (rssi < -99) {
         rssi = -99;
     }
-    Serial.println("WifiSignal: " + String(rssi) + "db");
+    // Serial.println("WifiSignal: " + String(rssi) + "db");
     return rssi;
 }
 

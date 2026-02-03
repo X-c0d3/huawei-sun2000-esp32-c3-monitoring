@@ -36,6 +36,25 @@ String NowString() {
     return tmpNow;
 }
 
+String DateNowString() {
+    time_t now = time(nullptr);
+    struct tm* newtime = localtime(&now);
+    // Serial.println(ctime(&now));
+    String tmpNow = "";
+    tmpNow += String(newtime->tm_mday);
+    tmpNow += "/";
+    tmpNow += String(newtime->tm_mon + 1);
+    tmpNow += "/";
+    tmpNow += String(newtime->tm_year + 1900);
+    tmpNow += " ";
+    tmpNow += String(newtime->tm_hour);
+    tmpNow += ":";
+    tmpNow += String(newtime->tm_min);
+    tmpNow += ":";
+    tmpNow += String(newtime->tm_sec);
+    return tmpNow;
+}
+
 void setupTimeZone() {
     configTime(timezone * 3600, dst, ntp_server1, ntp_server2, ntp_server3);
     Serial.println("Waiting for time");
