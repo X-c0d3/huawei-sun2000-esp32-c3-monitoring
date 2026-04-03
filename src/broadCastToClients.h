@@ -18,6 +18,7 @@
 
 void publishToSocketIO(SocketIoClient& webSocket, InverterData data) {
     // https://arduinojson.org/v6/assistant/
+    unsigned long startTime = micros();
     StaticJsonDocument<1024> root;
     root["deviceName"] = DEVICE_NAME;
     root["deviceId"] = getChipId();
@@ -34,8 +35,12 @@ void publishToSocketIO(SocketIoClient& webSocket, InverterData data) {
     serializeJsonPretty(root, output);
 
     // Publish to socket.io server
-    if (ENABLE_SOCKETIO)
+    if (ENABLE_SOCKETIO) {
         webSocket.emit(SOCKETIO_CHANNEL, output.c_str());
+        unsigned long elapsedTime = micros() - startTime;
+        Serial.print(">>> Socket.IO Emit ElapsedTime: ");
+        Serial.println(formatDuration(elapsedTime));
+    }
 
     if (ENABLE_DEBUG_MODE)
         Serial.print(output);

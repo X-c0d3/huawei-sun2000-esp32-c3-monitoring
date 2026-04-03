@@ -283,4 +283,19 @@ String formatPower(float power, int decimals = 3) {
     }
 }
 
+String formatDuration(unsigned long microsValue) {
+    if (microsValue < 1000) {
+        // ถ้าไม่ถึง 1 ms ให้แสดงเป็น microseconds
+        return String(microsValue) + " us";
+    } else if (microsValue < 1000000) {
+        // ถ้าไม่ถึง 1 วินาที ให้แสดงเป็น ms (ทศนิยม 2 ตำแหน่ง)
+        float ms = microsValue / 1000.0;
+        return String(ms, 2) + " ms";
+    } else {
+        // ถ้าตั้งแต่ 1 วินาทีขึ้นไป ให้แสดงเป็น seconds
+        float sec = microsValue / 1000000.0;
+        return String(sec, 2) + " sec";
+    }
+}
+
 #endif

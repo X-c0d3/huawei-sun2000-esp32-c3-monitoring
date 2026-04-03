@@ -41,12 +41,13 @@ void wifiReset() {
     ESP.restart();
 }
 
-void setup_Wifi() {
+void setup_Wifi(uint8_t led_pin) {
     // Serial.println(String("WIFI_SSID: ") + WIFI_SSID);
     // Serial.println(String("WIFI_PASSWORD: ") + WIFI_PASSWORD);
 
     // WiFi.useStaticBuffers(true);
     WiFi.mode(WIFI_STA);
+    WiFi.setAutoReconnect(true);
     delay(100);
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
     WiFi.setTxPower(WIFI_POWER_8_5dBm);
@@ -63,6 +64,7 @@ void setup_Wifi() {
             Serial.print("ESP Restarting ");
             ESP.restart();
         }
+        digitalWrite(led_pin, !digitalRead(led_pin));
         i++;
     }
 

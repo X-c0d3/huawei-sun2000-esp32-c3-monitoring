@@ -23,7 +23,7 @@
 // Config RS485 adapter (Reader)
 #define SLAVE_ID 1
 #define BAUD_RATE 9600
-#define WDT_TIMEOUT 30
+#define WDT_TIMEOUT 60
 
 TFT_eSPI tft = TFT_eSPI();
 HardwareSerial hwSerial(1);
@@ -33,7 +33,7 @@ SocketIoClient webSocket;
 auto timer = timer_create_default();  // create a timer with default settings
 bool screenOn = true;
 unsigned long lastTouchTime = 0;
-const unsigned long timeout = 3 * 60 * 1000;  // 3min  Screen Sleep (Power Saving)
+const unsigned long timeout = 2 * 60 * 1000;  // 2min  Screen Sleep (Power Saving)
 
 String mainLogo = "/main-background1.jpg";
 
@@ -135,48 +135,55 @@ void drawDashboard(InverterData obj) {
 }
 
 bool getDeviceInfo(void*) {
-    Serial.println(" ---------------------------------------------------------");
-
-    InverterData obj = inverter.getDeviceInfo();
-
-    Serial.printf("Model: %s (%.0fKw)\n", obj.model.c_str(), obj.inverterPowerRate);
-    Serial.printf("SN: %s\n", obj.serialNo.c_str());
-    Serial.printf("FW Version: %s\n", obj.softwareVersion.c_str());
-    Serial.printf("Status: %s\n", obj.status.c_str());
-    Serial.printf("Type: %s\n", obj.meterType.c_str());
-    Serial.printf("SmartMeter status: %s\n", obj.meterStatus.c_str());
-    Serial.printf("Grid code : %s\n", obj.grid_code.c_str());
-    Serial.printf("IP : %s\n", obj.ip.c_str());
-
-    Serial.println("------------------------");
-    Serial.printf("Active Power : %.3f kW\n", obj.activePower);
-    Serial.printf("Grid Voltage: %.0f V, Current %.2f A (~ %.0f w)\n", obj.gridVolt, obj.gridCurrent, obj.gridVolt * obj.gridCurrent);
-    Serial.printf("Grid Frequency: %.0f Hz\n", obj.gridFrequency);
-    Serial.printf("Power factor: %.2f\n", obj.gridPowerFactor);
-    Serial.printf("Efficiency: %.0f %%\n", obj.efficiency);
-    Serial.printf("Temperature: %.1f °C\n", obj.temperature);
-
-    Serial.printf("Positive active energy: %.2f kWh\n", obj.positiveActivePower);
-    Serial.printf("Negative active energy: %s kWh\n", toCustomFixed(obj.reverseActivePower, 2));
-    Serial.printf("Daily energy: %.2f Kwh\n", obj.dailyEnergyYield);
-    Serial.printf("Total yield: %s Kwh\n", toCustomFixed(obj.accumulatedEnergy, 2));
-    Serial.printf("Daily Revenue: %.2f THB/day\n", obj.dailyRevenue);
-
-    Serial.println("------------------------");
-    Serial.printf("PV : %s\n", formatPower(obj.pv_power * 1000, 3));
-    Serial.printf("Grid : %s (Import from grid)\n", formatPower(obj.grid_power * 1000, 3));
-    Serial.printf("Load : %s\n", formatPower((obj.activePower + obj.grid_power) * 1000, 3));
-
-    Serial.println("------------------------");
-    Serial.println("--- Solar Panels Details ---");
-    Serial.printf("- PV1 Voltage: %.0f V / Current: %.1f A (string power: ~ %.0f w)\n", obj.pv1_voltage, obj.pv1_current, obj.pv1_voltage * obj.pv1_current);
-    Serial.printf("- PV2 Voltage: %.0f V / Current: %.1f A (string power: ~ %.0f w)\n", obj.pv2_voltage, obj.pv2_current, obj.pv2_voltage * obj.pv2_current);
-    Serial.printf("- PV3 Voltage: %.0f V / Current: %.1f A (string power: ~ %.0f w)\n", obj.pv3_voltage, obj.pv3_current, obj.pv3_voltage * obj.pv3_current);
-
-    drawDashboard(obj);
-    publishToSocketIO(webSocket, obj);
-
+    Serial.println("<< GetDeviceInfo >>");
     digitalWrite(ESP32C3_LED, !digitalRead(ESP32C3_LED));
+    try {
+        InverterData obj = inverter.getDeviceInfo();
+
+        unsigned long startTime = micros();
+        Serial.printf("Model: %s (%.0fKw)\n", obj.model.c_str(), obj.inverterPowerRate);
+        Serial.printf("SN: %s\n", obj.serialNo.c_str());
+        Serial.printf("FW Version: %s\n", obj.softwareVersion.c_str());
+        Serial.printf("Status: %s\n", obj.status.c_str());
+        Serial.printf("Type: %s\n", obj.meterType.c_str());
+        Serial.printf("SmartMeter status: %s\n", obj.meterStatus.c_str());
+        Serial.printf("Grid code : %s\n", obj.grid_code.c_str());
+        Serial.printf("IP : %s\n", obj.ip.c_str());
+
+        Serial.println("------------------------");
+        Serial.printf("Active Power : %.3f kW\n", obj.activePower);
+        Serial.printf("Grid Voltage: %.0f V, Current %.2f A (~ %.0f w)\n", obj.gridVolt, obj.gridCurrent, obj.gridVolt * obj.gridCurrent);
+        Serial.printf("Grid Frequency: %.0f Hz\n", obj.gridFrequency);
+        Serial.printf("Power factor: %.2f\n", obj.gridPowerFactor);
+        Serial.printf("Efficiency: %.0f %%\n", obj.efficiency);
+        Serial.printf("Temperature: %.1f °C\n", obj.temperature);
+
+        Serial.printf("Positive active energy: %.2f kWh\n", obj.positiveActivePower);
+        Serial.printf("Negative active energy: %s kWh\n", toCustomFixed(obj.reverseActivePower, 2));
+        Serial.printf("Daily energy: %.2f Kwh\n", obj.dailyEnergyYield);
+        Serial.printf("Total yield: %s Kwh\n", toCustomFixed(obj.accumulatedEnergy, 2));
+        Serial.printf("Daily Revenue: %.2f THB/day\n", obj.dailyRevenue);
+
+        Serial.println("------------------------");
+        Serial.printf("PV : %s\n", formatPower(obj.pv_power * 1000, 3));
+        Serial.printf("Grid : %s (Import from grid)\n", formatPower(obj.grid_power * 1000, 3));
+        Serial.printf("Load : %s\n", formatPower((obj.activePower + obj.grid_power) * 1000, 3));
+
+        Serial.println("------------------------");
+        Serial.println("--- Solar Panels Details ---");
+        Serial.printf("- PV1 Voltage: %.0f V / Current: %.1f A (string power: ~ %.0f w)\n", obj.pv1_voltage, obj.pv1_current, obj.pv1_voltage * obj.pv1_current);
+        Serial.printf("- PV2 Voltage: %.0f V / Current: %.1f A (string power: ~ %.0f w)\n", obj.pv2_voltage, obj.pv2_current, obj.pv2_voltage * obj.pv2_current);
+        Serial.printf("- PV3 Voltage: %.0f V / Current: %.1f A (string power: ~ %.0f w)\n", obj.pv3_voltage, obj.pv3_current, obj.pv3_voltage * obj.pv3_current);
+
+        drawDashboard(obj);
+        yield();
+        publishToSocketIO(webSocket, obj);
+
+        unsigned long elapsedTime = micros() - startTime;
+        Serial.println(" -------------- ElapsedTime " + formatDuration(elapsedTime) + " -------------- Last Update: " + DateNowString());
+    } catch (std::exception& e) {
+        Serial.println("-- ERROR : " + String(e.what()));
+    }
     return true;  // repeat? true
 }
 
@@ -200,7 +207,7 @@ void setup() {
 
     // Connect WIFI
     drawFixedText(tft, 240, 150, 40, 10, "Connecting WIFI .... ", TFT_WHITE, TFT_TRANSPARENT, 2);
-    setup_Wifi();
+    setup_Wifi(ESP32C3_LED);
     drawFixedText(tft, 240, 150, 40, 10, "Configuring the System Time Zone", TFT_WHITE, TFT_TRANSPARENT, 2);
     setupTimeZone();
 
@@ -229,7 +236,7 @@ void setup() {
         esp_task_wdt_init(WDT_TIMEOUT, true);  // true = reset chip
         esp_task_wdt_add(NULL);
 
-        timer.every(2000, getDeviceInfo);
+        timer.every(2500, getDeviceInfo);
     }
     lastTouchTime = millis();
 }
