@@ -47,6 +47,12 @@ Read data from Huawei-SUN2000 Solar Inverter via Modbus RS486 with ESP32-C3
 // The XPT2046 requires a lower SPI clock rate of 2.5MHz so we define that here:
 #define SPI_TOUCH_FREQUENCY 2500000
 
+
+VDO Review
+https://www.youtube.com/watch?v=PvaOxBSYhOM
+
+https://www.youtube.com/watch?v=9lNPaSw_YSI
+
 ```
 
 <div style="display: inline-flex; align-items: center;">
