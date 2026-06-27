@@ -73,5 +73,6 @@ https://www.youtube.com/watch?v=9lNPaSw_YSI
 <img src="https://github.com/X-c0d3/huawei-sun2000-esp32-c3-monitoring/blob/main/doc/IMG_1026.jpg"  width="ุ600">
 <img src="https://github.com/X-c0d3/huawei-sun2000-esp32-c3-monitoring/blob/main/doc/IMG_1027.jpg"  width="ุ600">
 <img src="https://github.com/X-c0d3/huawei-sun2000-esp32-c3-monitoring/blob/main/doc/IMG_1036.jpg"  width="ุ600">
+<img src="https://github.com/X-c0d3/huawei-sun2000-esp32-c3-monitoring/blob/main/doc/IMG_1038.jpg"  width="ุ600">
 <img src="https://github.com/X-c0d3/huawei-sun2000-esp32-c3-monitoring/blob/main/doc/IMG_1037.jpg"  width="ุ600">
 </p>
