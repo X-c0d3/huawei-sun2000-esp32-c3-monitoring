@@ -6,9 +6,11 @@
 
 #include <HardwareSerial.h>
 #include <ModbusMaster.h>
+#include <PubSubClient.h>
 #include <SPIFFS.h>
 #include <SocketIoClient.h>
 #include <TJpg_Decoder.h>
+#include <WiFiClient.h>
 #include <arduino-timer.h>
 
 #include "HuaweiSun2000Client.h"
@@ -29,6 +31,8 @@ TFT_eSPI tft = TFT_eSPI();
 HardwareSerial hwSerial(1);
 HuaweiSun2000Client inverter(hwSerial, SLAVE_ID, BAUD_RATE);
 SocketIoClient webSocket;
+WiFiClient mqttWifiClient;
+PubSubClient mqttClient(mqttWifiClient);
 
 auto timer = timer_create_default();  // create a timer with default settings
 bool screenOn = true;
@@ -41,6 +45,25 @@ String mainLogo = "/main-background1.jpg";
 bool jpgRender(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t* bitmap) {
     tft.pushImage(x, y, w, h, bitmap);
     return true;
+}
+
+unsigned long lastMqttReconnectAttempt = 0;
+const unsigned long mqttReconnectInterval = 5000;
+
+void mqttReconnect() {
+    if (mqttClient.connected())
+        return;
+    if (millis() - lastMqttReconnectAttempt < mqttReconnectInterval)
+        return;
+    lastMqttReconnectAttempt = millis();
+
+    String clientId = "ESP32-" + getChipId();
+    if (mqttClient.connect(clientId.c_str(), MQTT_USERNAME, MQTT_PASSWORD)) {
+        Serial.println("MQTT connected");
+    } else {
+        Serial.print("MQTT connect failed, rc=");
+        Serial.println(mqttClient.state());
+    }
 }
 
 void event(const char* payload, size_t length) {
@@ -178,6 +201,7 @@ bool getDeviceInfo(void*) {
         drawDashboard(obj);
         yield();
         publishToSocketIO(webSocket, obj);
+        publishToMqtt(mqttClient, obj);
 
         unsigned long elapsedTime = micros() - startTime;
         Serial.println(" -------------- ElapsedTime " + formatDuration(elapsedTime) + " -------------- Last Update: " + DateNowString());
@@ -233,6 +257,11 @@ void setup() {
             webSocket.on(SOCKETIO_CHANNEL, event);
         }
 
+        if (ENABLE_MQTT) {
+            mqttClient.setServer(MQTT_BROKER_HOST, MQTT_BROKER_PORT);
+            mqttReconnect();
+        }
+
         esp_task_wdt_init(WDT_TIMEOUT, true);  // true = reset chip
         esp_task_wdt_add(NULL);
 
@@ -244,6 +273,10 @@ void setup() {
 void loop() {
     if (WiFi.status() == WL_CONNECTED) {
         webSocket.loop();
+        if (ENABLE_MQTT) {
+            mqttReconnect();
+            mqttClient.loop();
+        }
         esp_task_wdt_reset();
     }
 
