@@ -36,6 +36,10 @@ PubSubClient mqttClient(mqttWifiClient);
 
 auto timer = timer_create_default();  // create a timer with default settings
 bool screenOn = true;
+
+// Daily grid import tracking
+float gridImportBaseline = -1.0f;  // value of reg 37121 at midnight; -1 = not set
+int lastResetDay = -1;
 unsigned long lastTouchTime = 0;
 const unsigned long timeout = 2 * 60 * 1000;  // 2min  Screen Sleep (Power Saving)
 
@@ -163,6 +167,22 @@ bool getDeviceInfo(void*) {
     try {
         InverterData obj = inverter.getDeviceInfo();
 
+        // --- Daily grid import calculation ---
+        {
+            time_t now = time(nullptr);
+            struct tm* t = localtime(&now);
+            if (t->tm_mday != lastResetDay) {
+                // New day: reset baseline at first reading after midnight
+                gridImportBaseline = obj.gridImportEnergy;
+                lastResetDay = t->tm_mday;
+                Serial.printf("Daily grid import baseline reset: %.2f kWh\n", gridImportBaseline);
+            }
+            obj.dailyGridImport = (gridImportBaseline >= 0)
+                ? max(0.0f, obj.gridImportEnergy - gridImportBaseline)
+                : 0.0f;
+        }
+        // ------------------------------------
+
         unsigned long startTime = micros();
         Serial.printf("Model: %s (%.0fKw)\n", obj.model.c_str(), obj.inverterPowerRate);
         Serial.printf("SN: %s\n", obj.serialNo.c_str());
@@ -181,8 +201,9 @@ bool getDeviceInfo(void*) {
         Serial.printf("Efficiency: %.0f %%\n", obj.efficiency);
         Serial.printf("Temperature: %.1f °C\n", obj.temperature);
 
-        Serial.printf("Positive active energy: %.2f kWh\n", obj.positiveActivePower);
-        Serial.printf("Negative active energy: %s kWh\n", toCustomFixed(obj.reverseActivePower, 2));
+        Serial.printf("Grid export energy (cumulative): %.2f kWh\n", obj.gridExportEnergy);
+        Serial.printf("Grid import energy (cumulative): %s kWh\n", toCustomFixed(obj.gridImportEnergy, 2));
+        Serial.printf("Daily grid import: %.2f kWh\n", obj.dailyGridImport);
         Serial.printf("Daily energy: %.2f Kwh\n", obj.dailyEnergyYield);
         Serial.printf("Total yield: %s Kwh\n", toCustomFixed(obj.accumulatedEnergy, 2));
         Serial.printf("Daily Revenue: %.2f THB/day\n", obj.dailyRevenue);

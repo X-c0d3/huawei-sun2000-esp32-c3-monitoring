@@ -35,8 +35,9 @@ class InverterData {
     float dailyEnergyYield;
     float accumulatedEnergy;
     float dailyRevenue;
-    float positiveActivePower;
-    float reverseActivePower;
+    float gridExportEnergy;    // reg 37119: cumulative kWh fed TO grid
+    float gridImportEnergy;    // reg 37121: cumulative kWh from grid
+    float dailyGridImport;     // calculated: kWh imported from grid today
 
     // PV details
     float pv1_voltage;
@@ -68,8 +69,9 @@ class InverterData {
         obj["dailyEnergyYield"] = dailyEnergyYield;
         obj["dailyRevenue"] = dailyRevenue;
         obj["accumulatedEnergy"] = accumulatedEnergy;
-        obj["positiveActivePower"] = positiveActivePower;
-        obj["reverseActivePower"] = reverseActivePower;
+        obj["gridExportEnergy"] = gridExportEnergy;
+        obj["gridImportEnergy"] = gridImportEnergy;
+        obj["dailyGridImport"] = dailyGridImport;
         obj["pv1_voltage"] = pv1_voltage;
         obj["pv1_current"] = pv1_current;
         obj["pv2_voltage"] = pv2_voltage;
