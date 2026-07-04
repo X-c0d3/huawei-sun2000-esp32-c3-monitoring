@@ -1,0 +1,36 @@
+USE_MODBUS_TCP = false → ใช้กับ LC0 (RS485 ตรง)
+USE_MODBUS_TCP = true + MODBUS_TCP_HOST "192.168.1.165" → ใช้กับ M1 (ผ่าน Smart Dongle)
+ก่อนแฟลชอย่าลืมเปิด Modbus TCP > Unrestricted ในแอปฝั่ง dongle ก่อน ถ้าเทสแล้วอ่านค่าไม่ได้ (timeout/exception/ได้ค่าว่าง) 
+ส่ง log จาก Serial Monitor มาดูต่อได้เลย จะได้ช่วยวินิจฉัยว่าเป็นปัญหาที่ port (502 vs 6607), slave ID, หรือ dongle firmware บล็อกการ forward ตามที่คุยกันไว้
+
+
+
+
+
+
+
+เราสามารถหา ip ของ Smart Dongle ได้อย่างไร บ้าง
+
+มีหลายวิธีหาได้ครับ เรียงจากง่ายไปยาก:
+
+1. ผ่านแอป FusionSolar / SUN2000 (ง่ายสุด)
+เข้า Me > Device Commissioning → เชื่อมต่อ inverter (ผ่าน WLAN hotspot ของตัวเครื่องหรือ Bluetooth) → เข้าไปดูหน้า Dongle Parameter Settings / Communication Configuration จะมีข้อมูล WLAN/IP address ของ dongle แสดงอยู่
+
+2. เข้าหน้า Admin ของเราเตอร์ (เจอง่าย ไม่ต้องง้อแอป)
+เข้า router (เช่น 192.168.1.1) → ดูหน้า DHCP Client List / Connected Devices หา hostname ที่ขึ้นต้นแนว SDongle... หรือ MAC address ที่เป็นของ Huawei (OUI ขึ้นต้นด้วย Huawei) — วิธีนี้คือที่คุณน่าจะได้ 192.168.1.165 มาแล้ว
+
+3. Scan หา host ที่เปิดพอร์ต Modbus (502/6607) ในวง LAN
+ถ้าใช้ mac/linux มี nmap:
+
+nmap -p 502,6607 192.168.1.0/24
+หรือแอป Fing บนมือถือ ก็ scan หา device ในวงเดียวกันได้ง่าย ๆ
+
+4. ตั้ง Static IP / DHCP Reservation ไว้เลย
+เพราะ IP ที่ได้จาก DHCP อาจเปลี่ยนได้ถ้า router รีสตาร์ทหรือ lease หมดอายุ — แนะนำเข้า router แล้ว bind MAC address ของ dongle ให้ได้ IP เดิมตลอด (เช่น fix ไว้ที่ 192.168.1.165) จะได้ไม่ต้องมาหาใหม่ทุกครั้งและสคริปต์ Test_HuaweiSun2000Client.js จะไม่พังเวลา IP เปลี่ยน
+
+ถ้า router ของคุณรองรับ ผมแนะนำทำข้อ 4 ควบคู่กับข้อ 2 ไปเลยครับ จะได้ IP นิ่งใช้งานระยะยาว
+
+
+
+nc -zv 192.168.1.165 502
+nc -zv 192.168.1.165 6607
