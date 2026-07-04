@@ -25,9 +25,17 @@ class HuaweiSun2000Client {
     uint32_t baudRate = 0;
     uint16_t regBuffer[125];
 
-    // Modbus-TCP (MBAP) function code 0x03: read holding registers.
+    // Field-tested against a real Smart Dongle: the very first Modbus
+    // request right after a fresh TCP connect (or after the dongle has been
+    // idle) almost always times out, even though the connection itself is
+    // fine. A short retry on the SAME socket succeeds on the 2nd/3rd try.
+    // No reconnect is needed between attempts, just a small delay.
+    static const uint8_t MODBUS_TCP_MAX_RETRIES = 3;
+    static const uint16_t MODBUS_TCP_RETRY_DELAY_MS = 500;
+
+    // Single-attempt Modbus-TCP (MBAP) function code 0x03: read holding registers.
     // The dongle only forwards requests when "Modbus TCP > Unrestricted" is enabled on the inverter/app side.
-    bool readHoldingRegistersTcp(uint16_t address, uint16_t quantity) {
+    bool readHoldingRegistersTcpOnce(uint16_t address, uint16_t quantity) {
         if (!tcpClient.connected() && !tcpClient.connect(tcpHost, tcpPort)) {
             Serial.println("Modbus TCP connect failed");
             return false;
@@ -50,8 +58,7 @@ class HuaweiSun2000Client {
         while (tcpClient.available() < (int)sizeof(header)) {
             if (millis() - start > API_TIMEOUT) {
                 Serial.println("Modbus TCP response timeout");
-                tcpClient.stop();
-                return false;
+                return false;  // don't stop() here — let the retry wrapper reuse the socket
             }
         }
         tcpClient.read(header, sizeof(header));
@@ -67,7 +74,6 @@ class HuaweiSun2000Client {
         while ((uint16_t)tcpClient.available() < byteCount) {
             if (millis() - start > API_TIMEOUT) {
                 Serial.println("Modbus TCP data timeout");
-                tcpClient.stop();
                 return false;
             }
         }
@@ -77,6 +83,25 @@ class HuaweiSun2000Client {
             regBuffer[i] = (data[i * 2] << 8) | data[i * 2 + 1];
         }
         return true;
+    }
+
+    // Retries the same open TCP connection a few times before giving up.
+    // This absorbs the dongle's "cold start" timeout on the first request.
+    bool readHoldingRegistersTcp(uint16_t address, uint16_t quantity) {
+        for (uint8_t attempt = 1; attempt <= MODBUS_TCP_MAX_RETRIES; attempt++) {
+            if (readHoldingRegistersTcpOnce(address, quantity)) {
+                return true;
+            }
+            Serial.printf("Modbus TCP attempt %d/%d failed for register %d\n", attempt, MODBUS_TCP_MAX_RETRIES, address);
+
+            if (attempt < MODBUS_TCP_MAX_RETRIES) {
+                delay(MODBUS_TCP_RETRY_DELAY_MS);
+            }
+        }
+        // All retries exhausted — the socket may be in a bad state, force a
+        // fresh connect() on the next call instead of leaving it half-open.
+        tcpClient.stop();
+        return false;
     }
 
     bool readHoldingRegisters(uint16_t address, uint16_t quantity) {

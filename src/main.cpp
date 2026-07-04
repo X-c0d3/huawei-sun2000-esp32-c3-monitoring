@@ -271,7 +271,7 @@ void setup() {
         esp_task_wdt_init(WDT_TIMEOUT, true);  // true = reset chip
         esp_task_wdt_add(NULL);
 
-        timer.every(2500, getDeviceInfo);
+        timer.every(3000, getDeviceInfo);
     }
     lastTouchTime = millis();
 }
