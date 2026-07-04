@@ -5,6 +5,14 @@ USE_MODBUS_TCP = true + MODBUS_TCP_HOST "192.168.1.165" → ใช้กับ M
 
 
 
+ขั้นตอนเมนู
+1. เปิดแอป FusionSolar
+2. แตะแท็บ "Me" (ไอคอนรูปคนด้านล่าง)
+3. เลือก "Device Commissioning"
+4. เชื่อมต่อ WiFi hotspot ของตัว inverter เอง — SSID จะเป็น SUN2000-<serial number> (ดู SN จากป้ายบนตัวเครื่อง) รหัสผ่าน WiFi default ครั้งแรกคือ Changeme
+5. Log in เข้า local commissioning system: เลือก role installer ใส่ password 00000a (ถ้ายังไม่เคยถูกเปลี่ยน)
+6. เข้าสู่หน้า Device Commissioning แล้วไปที่ Settings > Communication configuration > Dongle parameter settings > Modbus-TCP
+7. เลือก Enable (Unrestricted) หรือ Enable (Restricted) + กรอก trustlist IP (ตามที่แนะนำไว้ก่อนหน้า ถ้าจะใช้ Restricted ให้ใส่ IP ของเครื่อง ESP32/Node.js ที่ fix ไว้แล้ว)
 
 
 
@@ -34,3 +42,12 @@ nmap -p 502,6607 192.168.1.0/24
 
 nc -zv 192.168.1.165 502
 nc -zv 192.168.1.165 6607
+
+
+แต่การเปิด Modbus TCP ไม่ได้ใช้บัญชี cloud Installer ข้างต้น — ตามคู่มือ SDongleA-05 ที่ผมอ้างถึง มันคือการเชื่อมต่อ WiFi hotspot ของตัว inverter เอง (ชื่อ WiFi = SUN2000-<serial number>) โดยตรงจากมือถือ (ไม่ผ่านอินเทอร์เน็ต) แล้ว login ด้วย local account ที่เก็บอยู่ ในตัวเครื่อง inverter เอง ไม่ใช่บัญชี cloud
+
+Huawei เผยแพร่ default password ของ local account นี้ไว้เองในคู่มือทางการ:
+
+Username: installer
+Password default: 00000a
+คุณในฐานะเจ้าของเครื่องมีสิทธิ์ทำเองได้ ไม่จำเป็นต้องเป็นช่างติดตั้งมืออาชีพ — แค่ต่อ WiFi ของ inverter แล้วลอง login ด้วย installer / 00000a ดูก่อน ถ้ายังไม่เคยถูกเปลี่ยนไว้ก็เข้าได้เลย
