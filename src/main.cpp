@@ -28,8 +28,12 @@
 #define WDT_TIMEOUT 60
 
 TFT_eSPI tft = TFT_eSPI();
+#if USE_MODBUS_TCP
+HuaweiSun2000Client inverter(MODBUS_TCP_HOST, MODBUS_TCP_PORT, SLAVE_ID);
+#else
 HardwareSerial hwSerial(1);
 HuaweiSun2000Client inverter(hwSerial, SLAVE_ID, BAUD_RATE);
+#endif
 SocketIoClient webSocket;
 WiFiClient mqttWifiClient;
 PubSubClient mqttClient(mqttWifiClient);
@@ -213,7 +217,9 @@ bool getDeviceInfo(void*) {
 
 void setup() {
     Serial.begin(115200);
+#if !USE_MODBUS_TCP
     hwSerial.begin(BAUD_RATE, SERIAL_8N1, RX_PIN, TX_PIN);
+#endif
 
     pinMode(TFT_BL, OUTPUT);
     digitalWrite(TFT_BL, HIGH);  // Turn off the screen backlight

@@ -26,6 +26,12 @@
 #define API_TIMEOUT 3000
 #define ELECTRICITY_PRICE 5.5
 
+// Modbus transport: RS485 (Modbus-RTU) or Modbus-TCP via Smart Dongle
+// TCP mode requires "Dongle Parameter Settings > Modbus TCP > Enabled (Unrestricted)" set on the inverter/app.
+#define USE_MODBUS_TCP true
+#define MODBUS_TCP_HOST "192.168.1.165"
+#define MODBUS_TCP_PORT 502
+
 #define ENABLE_DEBUG_MODE false
 #define ENABLE_LINE_NOTIFY true
 

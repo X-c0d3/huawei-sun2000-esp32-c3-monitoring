@@ -6,6 +6,9 @@
 
 #ifndef HUAWEI_SUN2000_CLIENT_H
 #define HUAWEI_SUN2000_CLIENT_H
+#include <ModbusMaster.h>
+#include <WiFiClient.h>
+
 #include "models/InverterData.h"
 #include "settings.h"
 #include "utility.h"
@@ -13,20 +16,93 @@
 class HuaweiSun2000Client {
    private:
     ModbusMaster node;
-    HardwareSerial& serialPort;  // อ้างอิง Serial ที่ส่งมา (เช่น Serial2)
+    HardwareSerial* serialPort = nullptr;  // ใช้เมื่อเป็นโหมด RS485 (RTU)
+    WiFiClient tcpClient;                  // ใช้เมื่อเป็นโหมด Modbus-TCP (ผ่าน Smart Dongle)
+    IPAddress tcpHost;
+    uint16_t tcpPort = 502;
+    bool useTcp = false;
     uint8_t slaveId;
-    uint32_t baudRate;
+    uint32_t baudRate = 0;
+    uint16_t regBuffer[125];
 
-    float parseRegisterValue(uint16_t address, uint16_t quantity, float gain, bool isSigned = false) {
+    // Modbus-TCP (MBAP) function code 0x03: read holding registers.
+    // The dongle only forwards requests when "Modbus TCP > Unrestricted" is enabled on the inverter/app side.
+    bool readHoldingRegistersTcp(uint16_t address, uint16_t quantity) {
+        if (!tcpClient.connected() && !tcpClient.connect(tcpHost, tcpPort)) {
+            Serial.println("Modbus TCP connect failed");
+            return false;
+        }
+
+        static uint16_t transactionId = 0;
+        transactionId++;
+        uint8_t request[12] = {
+            (uint8_t)(transactionId >> 8), (uint8_t)(transactionId & 0xFF),
+            0x00, 0x00,  // Protocol ID
+            0x00, 0x06,  // Length: unitId + function code + address + quantity
+            slaveId,
+            0x03,
+            (uint8_t)(address >> 8), (uint8_t)(address & 0xFF),
+            (uint8_t)(quantity >> 8), (uint8_t)(quantity & 0xFF)};
+        tcpClient.write(request, sizeof(request));
+
+        uint8_t header[9];  // MBAP(7) + function code(1) + byte count(1)
+        unsigned long start = millis();
+        while (tcpClient.available() < (int)sizeof(header)) {
+            if (millis() - start > API_TIMEOUT) {
+                Serial.println("Modbus TCP response timeout");
+                tcpClient.stop();
+                return false;
+            }
+        }
+        tcpClient.read(header, sizeof(header));
+
+        if (header[7] & 0x80) {
+            Serial.printf("Modbus TCP exception at %d: 0x%02X\n", address, header[8]);
+            return false;
+        }
+
+        uint8_t byteCount = header[8];
+        uint8_t data[250];
+        start = millis();
+        while ((uint16_t)tcpClient.available() < byteCount) {
+            if (millis() - start > API_TIMEOUT) {
+                Serial.println("Modbus TCP data timeout");
+                tcpClient.stop();
+                return false;
+            }
+        }
+        tcpClient.read(data, byteCount);
+
+        for (uint16_t i = 0; i < quantity; i++) {
+            regBuffer[i] = (data[i * 2] << 8) | data[i * 2 + 1];
+        }
+        return true;
+    }
+
+    bool readHoldingRegisters(uint16_t address, uint16_t quantity) {
+        if (useTcp) {
+            return readHoldingRegistersTcp(address, quantity);
+        }
+
         uint8_t result = node.readHoldingRegisters(address, quantity);
         if (result != node.ku8MBSuccess) {
             Serial.printf("Read error at %d: 0x%02X\n", address, result);
+            return false;
+        }
+        for (uint16_t i = 0; i < quantity; i++) {
+            regBuffer[i] = node.getResponseBuffer(i);
+        }
+        return true;
+    }
+
+    float parseRegisterValue(uint16_t address, uint16_t quantity, float gain, bool isSigned = false) {
+        if (!readHoldingRegisters(address, quantity)) {
             throw std::runtime_error("Modbus read failed");
         }
 
         uint32_t raw = 0;
         for (uint16_t i = 0; i < quantity; i++) {
-            raw = (raw << 16) | node.getResponseBuffer(i);
+            raw = (raw << 16) | regBuffer[i];
         }
 
         float value;
@@ -43,15 +119,14 @@ class HuaweiSun2000Client {
         return value / gain;
     }
     String parseRegisterString(uint16_t address, uint16_t quantity, bool trim = true, bool stopAtNull = true) {
-        uint8_t result = node.readHoldingRegisters(address, quantity);
-        if (result != node.ku8MBSuccess) {
-            Serial.printf("String read error at %d: 0x%02X\n", address, result);
+        if (!readHoldingRegisters(address, quantity)) {
+            Serial.printf("String read error at %d\n", address);
             return "-";
         }
 
         String str = "";
         for (uint16_t i = 0; i < quantity; i++) {
-            uint16_t word = node.getResponseBuffer(i);
+            uint16_t word = regBuffer[i];
             char hi = (word >> 8) & 0xFF;
             char lo = word & 0xFF;
 
@@ -67,18 +142,32 @@ class HuaweiSun2000Client {
     }
 
    public:
-    // Constructor
-    HuaweiSun2000Client(HardwareSerial& serial, uint8_t slave, uint32_t baud) : serialPort(serial), slaveId(slave), baudRate(baud) {
-        node.begin(slaveId, serialPort);
+    // RS485 (Modbus-RTU)
+    HuaweiSun2000Client(HardwareSerial& serial, uint8_t slave, uint32_t baud) : serialPort(&serial), slaveId(slave), baudRate(baud) {
+        node.begin(slaveId, serial);
+    }
+
+    // Modbus-TCP via Smart Dongle (e.g. SDongleA-05 with "Modbus TCP: Unrestricted" enabled)
+    HuaweiSun2000Client(const char* host, uint16_t port, uint8_t slave) : tcpPort(port), useTcp(true), slaveId(slave) {
+        tcpHost.fromString(host);
     }
 
     bool connect() {
-        serialPort.begin(baudRate, SERIAL_8N1);
+        if (useTcp) {
+            bool ok = tcpClient.connect(tcpHost, tcpPort);
+            Serial.println(ok ? "HuaweiSun2000Client connected (Modbus TCP)" : "HuaweiSun2000Client: Modbus TCP connect failed");
+            return ok;
+        }
+        serialPort->begin(baudRate, SERIAL_8N1);
         Serial.println("HuaweiSun2000Client connected");
         return true;
     }
     void disconnect() {
-        serialPort.end();
+        if (useTcp) {
+            tcpClient.stop();
+        } else {
+            serialPort->end();
+        }
     }
 
     float randomFloat(float minVal, float maxVal) {
