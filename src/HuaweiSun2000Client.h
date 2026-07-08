@@ -6,6 +6,8 @@
 
 #ifndef HUAWEI_SUN2000_CLIENT_H
 #define HUAWEI_SUN2000_CLIENT_H
+#include <Arduino.h>
+#include <ESP8266WiFi.h>
 #include <ModbusMaster.h>
 #include <WiFiClient.h>
 
@@ -122,7 +124,8 @@ class HuaweiSun2000Client {
 
     float parseRegisterValue(uint16_t address, uint16_t quantity, float gain, bool isSigned = false) {
         if (!readHoldingRegisters(address, quantity)) {
-            throw std::runtime_error("Modbus read failed");
+            Serial.printf("Modbus read failed");
+            return 0.0f;
         }
 
         uint32_t raw = 0;
@@ -201,74 +204,71 @@ class HuaweiSun2000Client {
     InverterData getDeviceInfo() {
         unsigned long startTime = micros();
         InverterData data;
-        try {
-            data.ip = WiFi.localIP().toString();
-            data.model = parseRegisterString(30000, 15);
-            data.serialNo = parseRegisterString(30015, 10);
-            data.inverterPowerRate = parseRegisterValue(30073, 2, 1000.0f);
-            data.softwareVersion = parseRegisterString(31025, 15);
-            data.status = getDeviceStatusDescription(parseRegisterValue(32089, 1, 1.0f));
-            data.activePower = parseRegisterValue(32080, 2, 1000.0f, true);
-            data.gridVolt = parseRegisterValue(37101, 2, 10.0f);
-            data.gridCurrent = abs(parseRegisterValue(37107, 2, 100.0f, true));
-            data.gridFrequency = parseRegisterValue(37118, 1, 100.0f);
-            data.gridPowerFactor = parseRegisterValue(37117, 1, 1000.0f);
-            data.efficiency = parseRegisterValue(32086, 1, 100.0f);
-            data.temperature = parseRegisterValue(32087, 1, 10.0f);
-            data.meterType = parseRegisterValue(37125, 2, 1.0f) == 0 ? "Single-phase" : "Three-phase";
-            data.meterStatus = parseRegisterValue(37100, 1, 1.0f) == 0 ? "Offline" : "Normal";
-            data.pv_power = parseRegisterValue(32064, 2, 1000.0f);
-            data.grid_power = abs(parseRegisterValue(37113, 2, 1000.0f, true));
-            data.grid_code = getGridCode(parseRegisterValue(42000, 1, 1));
-            data.dailyEnergyYield = parseRegisterValue(32114, 2, 100.0f);
-            data.dailyRevenue = data.dailyEnergyYield * float(ELECTRICITY_PRICE);
-            data.accumulatedEnergy = parseRegisterValue(32106, 2, 100.0f);
-            data.positiveActivePower = parseRegisterValue(37119, 2, 100.0f);
-            data.reverseActivePower = parseRegisterValue(37121, 2, 100.0f);
-            data.pv1_voltage = parseRegisterValue(32016, 1, 10.0f);
-            data.pv1_current = parseRegisterValue(32017, 1, 100.0f);
-            data.pv2_voltage = parseRegisterValue(32018, 1, 10.0f);
-            data.pv2_current = parseRegisterValue(32019, 1, 100.0f);
-            data.pv3_voltage = parseRegisterValue(32020, 1, 10.0f);
-            data.pv3_current = parseRegisterValue(32021, 1, 100.0f);
 
-            // --- TEST DATA ---
-            // data.ip = WiFi.localIP().toString();
-            // data.model = "SUN2000-10K-LC0";
-            // data.serialNo = "TA2510131915";
-            // data.inverterPowerRate = 10;
-            // data.softwareVersion = "V100R023C10SPC111";
-            // data.status = (randomFloat(1, 10) > 5) ? "Grid connected" : "Standby : no sunlight";
-            // data.activePower = randomFloat(0.020f, 1.6f);
-            // data.gridVolt = randomFloat(220.0f, 235.6f);
-            // data.gridCurrent = randomFloat(1.0f, 11.6f);
-            // data.gridFrequency = randomFloat(48.0f, 51.0f);
-            // data.gridPowerFactor = randomFloat(0.1f, 1.0f);
-            // data.efficiency = randomFloat(90.0f, 99.0f);
-            // data.temperature = randomFloat(30.0f, 40.0f);
-            // data.meterType = (randomFloat(1, 10) > 5) ? "Single-phase" : "Three-phase";
-            // data.meterStatus = (randomFloat(1, 10) > 5) ? "Offline" : "Normal";
-            // data.pv_power = randomFloat(0.200f, 2.6f);
-            // data.grid_power = randomFloat(0.020f, 1.2f);
-            // data.grid_code = getGridCode(randomFloat(26, 27));
-            // data.dailyEnergyYield = randomFloat(1.0f, 25.6f);
-            // data.dailyRevenue = data.dailyEnergyYield * float(ELECTRICITY_PRICE);
-            // data.accumulatedEnergy = 204400.0f;
-            // data.positiveActivePower = 3400.0f;
-            // data.reverseActivePower = 2342.0f;
-            // data.pv1_voltage = randomFloat(220.0f, 400.0f);
-            // data.pv1_current = randomFloat(2.0f, 15.0f);
-            // data.pv2_voltage = randomFloat(220.0f, 400.0f);
-            // data.pv2_current = randomFloat(2.0f, 15.0f);
-            // data.pv3_voltage = 0;  // randomFloat(220.0f, 400.0f);
-            // data.pv3_current = randomFloat(2.0f, 15.0f);
+        data.ip = WiFi.localIP().toString();
+        data.model = parseRegisterString(30000, 15);
+        data.serialNo = parseRegisterString(30015, 10);
+        data.inverterPowerRate = parseRegisterValue(30073, 2, 1000.0f);
+        data.softwareVersion = parseRegisterString(31025, 15);
+        data.status = getDeviceStatusDescription(parseRegisterValue(32089, 1, 1.0f));
+        data.activePower = parseRegisterValue(32080, 2, 1000.0f, true);
+        data.gridVolt = parseRegisterValue(37101, 2, 10.0f);
+        data.gridCurrent = abs(parseRegisterValue(37107, 2, 100.0f, true));
+        data.gridFrequency = parseRegisterValue(37118, 1, 100.0f);
+        data.gridPowerFactor = parseRegisterValue(37117, 1, 1000.0f);
+        data.efficiency = parseRegisterValue(32086, 1, 100.0f);
+        data.temperature = parseRegisterValue(32087, 1, 10.0f);
+        data.meterType = parseRegisterValue(37125, 2, 1.0f) == 0 ? "Single-phase" : "Three-phase";
+        data.meterStatus = parseRegisterValue(37100, 1, 1.0f) == 0 ? "Offline" : "Normal";
+        data.pv_power = parseRegisterValue(32064, 2, 1000.0f);
+        data.grid_power = abs(parseRegisterValue(37113, 2, 1000.0f, true));
+        data.grid_code = getGridCode(parseRegisterValue(42000, 1, 1));
+        data.dailyEnergyYield = parseRegisterValue(32114, 2, 100.0f);
+        data.dailyRevenue = data.dailyEnergyYield * float(ELECTRICITY_PRICE);
+        data.accumulatedEnergy = parseRegisterValue(32106, 2, 100.0f);
+        data.positiveActivePower = parseRegisterValue(37119, 2, 100.0f);
+        data.reverseActivePower = parseRegisterValue(37121, 2, 100.0f);
+        data.pv1_voltage = parseRegisterValue(32016, 1, 10.0f);
+        data.pv1_current = parseRegisterValue(32017, 1, 100.0f);
+        data.pv2_voltage = parseRegisterValue(32018, 1, 10.0f);
+        data.pv2_current = parseRegisterValue(32019, 1, 100.0f);
+        data.pv3_voltage = parseRegisterValue(32020, 1, 10.0f);
+        data.pv3_current = parseRegisterValue(32021, 1, 100.0f);
 
-            unsigned long elapsedTime = micros() - startTime;
-            Serial.print(">>> GetModBusData ElapsedTime: ");
-            Serial.println(formatDuration(elapsedTime));
-        } catch (std::exception& e) {
-            Serial.println("-- ERROR: " + String(e.what()));
-        }
+        // --- TEST DATA ---
+        // data.ip = WiFi.localIP().toString();
+        // data.model = "SUN2000-10K-LC0";
+        // data.serialNo = "TA2510131915";
+        // data.inverterPowerRate = 10;
+        // data.softwareVersion = "V100R023C10SPC111";
+        // data.status = (randomFloat(1, 10) > 5) ? "Grid connected" : "Standby : no sunlight";
+        // data.activePower = randomFloat(0.020f, 1.6f);
+        // data.gridVolt = randomFloat(220.0f, 235.6f);
+        // data.gridCurrent = randomFloat(1.0f, 11.6f);
+        // data.gridFrequency = randomFloat(48.0f, 51.0f);
+        // data.gridPowerFactor = randomFloat(0.1f, 1.0f);
+        // data.efficiency = randomFloat(90.0f, 99.0f);
+        // data.temperature = randomFloat(30.0f, 40.0f);
+        // data.meterType = (randomFloat(1, 10) > 5) ? "Single-phase" : "Three-phase";
+        // data.meterStatus = (randomFloat(1, 10) > 5) ? "Offline" : "Normal";
+        // data.pv_power = randomFloat(0.200f, 2.6f);
+        // data.grid_power = randomFloat(0.020f, 1.2f);
+        // data.grid_code = getGridCode(randomFloat(26, 27));
+        // data.dailyEnergyYield = randomFloat(1.0f, 25.6f);
+        // data.dailyRevenue = data.dailyEnergyYield * float(ELECTRICITY_PRICE);
+        // data.accumulatedEnergy = 204400.0f;
+        // data.positiveActivePower = 3400.0f;
+        // data.reverseActivePower = 2342.0f;
+        // data.pv1_voltage = randomFloat(220.0f, 400.0f);
+        // data.pv1_current = randomFloat(2.0f, 15.0f);
+        // data.pv2_voltage = randomFloat(220.0f, 400.0f);
+        // data.pv2_current = randomFloat(2.0f, 15.0f);
+        // data.pv3_voltage = 0;  // randomFloat(220.0f, 400.0f);
+        // data.pv3_current = randomFloat(2.0f, 15.0f);
+
+        unsigned long elapsedTime = micros() - startTime;
+        Serial.print(">>> GetModBusData ElapsedTime: ");
+        Serial.println(formatDuration(elapsedTime));
         return data;
     }
 };

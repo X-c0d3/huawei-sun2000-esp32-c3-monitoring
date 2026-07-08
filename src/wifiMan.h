@@ -10,13 +10,10 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <DNSServer.h>
+#include <ESP8266WiFi.h>
 #include <FS.h>
-#include <WiFi.h>
+#include <WiFiClientSecureAxTLS.h>
 
-#include "SPIFFS.h"
-#ifdef ESP32
-#include <SPIFFS.h>
-#endif
 #include "settings.h"
 
 bool shouldSaveConfig = true;
@@ -41,43 +38,26 @@ void wifiReset() {
     ESP.restart();
 }
 
-void setup_Wifi(uint8_t led_pin) {
-    // Serial.println(String("WIFI_SSID: ") + WIFI_SSID);
-    // Serial.println(String("WIFI_PASSWORD: ") + WIFI_PASSWORD);
-
-    // WiFi.useStaticBuffers(true);
+void setup_Wifi() {
     WiFi.mode(WIFI_STA);
-    WiFi.setAutoReconnect(true);
-    delay(100);
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    WiFi.setTxPower(WIFI_POWER_8_5dBm);
 
-    delay(100);
+    if (WiFi.getMode() & WIFI_AP) {
+        WiFi.softAPdisconnect(true);
+    }
+
     Serial.println();
-    printMessage(0, 1, "WIFI Connecting...", true);
-
-    int i = 0;
     while (WiFi.status() != WL_CONNECTED) {
         delay(500);
-        Serial.print(String(i) + ",");
-        if (i == 40) {
-            Serial.print("ESP Restarting ");
-            ESP.restart();
-        }
-        digitalWrite(led_pin, !digitalRead(led_pin));
-        i++;
+        Serial.print(".");
     }
+
+    // setup_IpAddress();
 
     Serial.println();
     Serial.print("WIFI Connected ");
     String ip = WiFi.localIP().toString();
     Serial.println(ip.c_str());
-
-    long rssi = WiFi.RSSI();
-    Serial.println("WifiSignal: " + String(rssi) + "db");
-
-    Serial.println("Socket.io Server: " + String(SOCKETIO_HOST));
-    Serial.println();
 }
 
 long rssi;
@@ -92,6 +72,10 @@ long wifiSignal() {
     }
     // Serial.println("WifiSignal: " + String(rssi) + "db");
     return rssi;
+}
+
+int digits(int x) {
+    return ((bool)x * (int)log10(abs(x)) + 1);
 }
 
 #endif

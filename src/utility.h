@@ -8,8 +8,6 @@
 #define UTILITY_H
 
 #include <Arduino.h>
-#include <HTTPClient.h>
-#include <TFT_eSPI.h>
 
 int timezone = 7;
 char ntp_server1[20] = "ntp.ku.ac.th";
@@ -82,8 +80,8 @@ String getSplitValue(String data, char separator, int index) {
 }
 
 String getChipId() {
-    String ChipIdHex = String((uint32_t)(ESP.getEfuseMac() >> 32), HEX);
-    ChipIdHex += String((uint32_t)ESP.getEfuseMac(), HEX);
+    String ChipIdHex = String((uint32_t)(ESP.getChipId() >> 32), HEX);
+    ChipIdHex += String((uint32_t)ESP.getChipId(), HEX);
     return ChipIdHex;
 }
 
@@ -114,61 +112,6 @@ String smartDuration(long sec) {
     }
 }
 
-void drawBar(TFT_eSPI tft, int x, int y, int w, int h, float value, float maxValue, uint16_t color) {
-    int filled = (int)((value / maxValue) * w);
-    tft.fillRect(x, y, w, h, TFT_DARKGREY);
-    tft.fillRect(x, y, filled, h, color);
-}
-
-void drawFixedText(TFT_eSPI& tft, int x, int y,
-                   int width, int height,
-                   String text,
-                   uint16_t textColor,
-                   uint16_t bgColor,
-                   uint8_t fontSize,
-                   uint8_t align = MC_DATUM) {
-    tft.fillRect(x, y, width, height, bgColor);
-    //  ตั้งค่าฟอนต์
-    tft.setTextFont(fontSize);
-    tft.setTextColor(textColor, bgColor);
-
-    tft.setTextDatum(align);
-    int drawX;
-    int drawY = y + (height / 2);
-
-    switch (align) {
-        case ML_DATUM:
-            drawX = x + 4;
-            break;
-        case MR_DATUM:
-            drawX = x + width - 4;
-            break;
-        case MC_DATUM:
-        default:
-            drawX = x + (width / 2);
-            break;
-    }
-
-    tft.drawString(text, drawX, drawY);
-}
-
-void drawStatus(TFT_eSPI tft, int x, int y, bool status) {
-    tft.fillCircle(x, y, 6, status ? TFT_GREEN : TFT_RED);
-}
-
-String httpGet(String url) {
-    HTTPClient http;
-    http.begin(url);
-    int code = http.GET();
-    if (code == HTTP_CODE_OK) {
-        String payload = http.getString();
-        http.end();
-        return payload;
-    }
-    http.end();
-    Serial.println("HTTP GET failed: " + String(code));
-    return "";
-}
 String getDeviceStatusDescription(uint16_t code) {
     switch (code) {
         case 0xa000:
