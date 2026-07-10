@@ -32,6 +32,7 @@ class InverterData {
     float pv_power;
     String grid_code;
     float grid_power;
+    float load_power;
     float dailyEnergyYield;
     float accumulatedEnergy;
     float dailyRevenue;
@@ -64,6 +65,7 @@ class InverterData {
         obj["meterStatus"] = meterStatus;
         obj["pv_power"] = pv_power;
         obj["grid_power"] = grid_power;
+        obj["load_power"] = load_power;
         obj["grid_code"] = grid_code;
         obj["dailyEnergyYield"] = dailyEnergyYield;
         obj["dailyRevenue"] = dailyRevenue;

@@ -218,7 +218,8 @@ class HuaweiSun2000Client {
             data.meterType = parseRegisterValue(37125, 2, 1.0f) == 0 ? "Single-phase" : "Three-phase";
             data.meterStatus = parseRegisterValue(37100, 1, 1.0f) == 0 ? "Offline" : "Normal";
             data.pv_power = parseRegisterValue(32064, 2, 1000.0f);
-            data.grid_power = abs(parseRegisterValue(37113, 2, 1000.0f, true));
+            data.grid_power = parseRegisterValue(37113, 2, 1000.0f, true);
+            data.load_power = data.pv_power + data.grid_power;
             data.grid_code = getGridCode(parseRegisterValue(42000, 1, 1));
             data.dailyEnergyYield = parseRegisterValue(32114, 2, 100.0f);
             data.dailyRevenue = data.dailyEnergyYield * float(ELECTRICITY_PRICE);
@@ -250,6 +251,7 @@ class HuaweiSun2000Client {
             // data.meterStatus = (randomFloat(1, 10) > 5) ? "Offline" : "Normal";
             // data.pv_power = randomFloat(0.200f, 2.6f);
             // data.grid_power = randomFloat(0.020f, 1.2f);
+            // data.load_power = data.pv_power + data.grid_power;
             // data.grid_code = getGridCode(randomFloat(26, 27));
             // data.dailyEnergyYield = randomFloat(1.0f, 25.6f);
             // data.dailyRevenue = data.dailyEnergyYield * float(ELECTRICITY_PRICE);

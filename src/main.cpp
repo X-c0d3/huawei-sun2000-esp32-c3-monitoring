@@ -193,8 +193,8 @@ bool getDeviceInfo(void*) {
 
         Serial.println("------------------------");
         Serial.printf("PV : %s\n", formatPower(obj.pv_power * 1000, 3));
-        Serial.printf("Grid : %s (Import from grid)\n", formatPower(obj.grid_power * 1000, 3));
-        Serial.printf("Load : %s\n", formatPower((obj.activePower + obj.grid_power) * 1000, 3));
+        Serial.printf("Grid : %s\n", formatPower(obj.grid_power * 1000, 3));
+        Serial.printf("Load : %s\n", formatPower(obj.load_power * 1000, 3));
 
         Serial.println("------------------------");
         Serial.println("--- Solar Panels Details ---");
