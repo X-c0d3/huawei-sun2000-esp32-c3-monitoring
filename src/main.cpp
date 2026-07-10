@@ -33,6 +33,9 @@ PubSubClient mqttClient(mqttWifiClient);
 
 auto timer = timer_create_default();  // create a timer with default settings
 bool screenOn = true;
+
+float gridImportBaseline = -1.0f;
+int lastResetDay = -1;
 unsigned long lastTouchTime = 0;
 const unsigned long timeout = 2 * 60 * 1000;  // 2min  Screen Sleep (Power Saving)
 
@@ -66,6 +69,21 @@ bool getDeviceInfo(void*) {
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
 
     InverterData obj = inverter.getDeviceInfo();
+
+    // Daily grid import = reg37121_now - reg37121_at_midnight
+    {
+        time_t now = time(nullptr);
+        struct tm* t = localtime(&now);
+        if (t->tm_mday != lastResetDay) {
+            gridImportBaseline = obj.gridImportEnergy;
+            lastResetDay = t->tm_mday;
+            Serial.printf("Daily grid import baseline reset: %.2f kWh\n", gridImportBaseline);
+        }
+        obj.dailyGridImport = (gridImportBaseline >= 0)
+            ? max(0.0f, obj.gridImportEnergy - gridImportBaseline)
+            : 0.0f;
+    }
+
     unsigned long startTime = micros();
     Serial.printf("Model: %s (%.0fKw)\n", obj.model.c_str(), obj.inverterPowerRate);
     Serial.printf("SN: %s\n", obj.serialNo.c_str());
@@ -84,16 +102,17 @@ bool getDeviceInfo(void*) {
     Serial.printf("Efficiency: %.0f %%\n", obj.efficiency);
     Serial.printf("Temperature: %.1f °C\n", obj.temperature);
 
-    Serial.printf("Positive active energy: %.2f kWh\n", obj.positiveActivePower);
-    Serial.printf("Negative active energy: %s kWh\n", toCustomFixed(obj.reverseActivePower, 2).c_str());
+    Serial.printf("Grid export energy (cumulative): %.2f kWh\n", obj.gridExportEnergy);
+    Serial.printf("Grid import energy (cumulative): %.2f kWh\n", obj.gridImportEnergy);
+    Serial.printf("Daily grid import: %.2f kWh\n", obj.dailyGridImport);
     Serial.printf("Daily energy: %.2f Kwh\n", obj.dailyEnergyYield);
     Serial.printf("Total yield: %s Kwh\n", toCustomFixed(obj.accumulatedEnergy, 2).c_str());
     Serial.printf("Daily Revenue: %.2f THB/day\n", obj.dailyRevenue);
 
     Serial.println("------------------------");
-    Serial.printf("PV : %s\n", formatPower(obj.pv_power * 1000, 3).c_str());
-    Serial.printf("Grid : %s (Import from grid)\n", formatPower(obj.grid_power * 1000, 3).c_str());
-    Serial.printf("Load : %s\n", formatPower((obj.activePower + obj.grid_power) * 1000, 3).c_str());
+    Serial.printf("PV   : %s\n", formatPower(obj.pv_power * 1000, 3).c_str());
+    Serial.printf("Grid : %s  (+export / -import)\n", formatPower(obj.grid_power * 1000, 3).c_str());
+    Serial.printf("Load : %s\n", formatPower(obj.load_power * 1000, 3).c_str());
 
     Serial.println("------------------------");
     Serial.println("--- Solar Panels Details ---");
@@ -129,6 +148,8 @@ void setup() {
     if (WiFi.status() == WL_CONNECTED) {
         if (ENABLE_MQTT) {
             mqttClient.setServer(MQTT_BROKER_HOST, MQTT_BROKER_PORT);
+            mqttClient.setBufferSize(4096);
+            mqttClient.setKeepAlive(60);
             mqttReconnect();
         }
 

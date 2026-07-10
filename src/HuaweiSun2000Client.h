@@ -221,13 +221,14 @@ class HuaweiSun2000Client {
         data.meterType = parseRegisterValue(37125, 2, 1.0f) == 0 ? "Single-phase" : "Three-phase";
         data.meterStatus = parseRegisterValue(37100, 1, 1.0f) == 0 ? "Offline" : "Normal";
         data.pv_power = parseRegisterValue(32064, 2, 1000.0f);
-        data.grid_power = abs(parseRegisterValue(37113, 2, 1000.0f, true));
+        data.grid_power = parseRegisterValue(37113, 2, 1000.0f, true);  // signed: +export, -import
+        data.load_power = data.pv_power - data.grid_power;              // Load = PV - signed_grid
         data.grid_code = getGridCode(parseRegisterValue(42000, 1, 1));
         data.dailyEnergyYield = parseRegisterValue(32114, 2, 100.0f);
         data.dailyRevenue = data.dailyEnergyYield * float(ELECTRICITY_PRICE);
         data.accumulatedEnergy = parseRegisterValue(32106, 2, 100.0f);
-        data.positiveActivePower = parseRegisterValue(37119, 2, 100.0f);
-        data.reverseActivePower = parseRegisterValue(37121, 2, 100.0f);
+        data.gridExportEnergy = parseRegisterValue(37119, 2, 100.0f);  // cumulative kWh TO grid
+        data.gridImportEnergy = parseRegisterValue(37121, 2, 100.0f);  // cumulative kWh FROM grid
         data.pv1_voltage = parseRegisterValue(32016, 1, 10.0f);
         data.pv1_current = parseRegisterValue(32017, 1, 100.0f);
         data.pv2_voltage = parseRegisterValue(32018, 1, 10.0f);
@@ -257,8 +258,8 @@ class HuaweiSun2000Client {
         // data.dailyEnergyYield = randomFloat(1.0f, 25.6f);
         // data.dailyRevenue = data.dailyEnergyYield * float(ELECTRICITY_PRICE);
         // data.accumulatedEnergy = 204400.0f;
-        // data.positiveActivePower = 3400.0f;
-        // data.reverseActivePower = 2342.0f;
+        // data.gridExportEnergy = 3400.0f;
+        // data.gridImportEnergy = 2342.0f;
         // data.pv1_voltage = randomFloat(220.0f, 400.0f);
         // data.pv1_current = randomFloat(2.0f, 15.0f);
         // data.pv2_voltage = randomFloat(220.0f, 400.0f);

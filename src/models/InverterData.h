@@ -31,12 +31,14 @@ class InverterData {
     String meterStatus;
     float pv_power;
     String grid_code;
-    float grid_power;
+    float grid_power;        // reg 37113 signed: +export to grid, -import from grid (kW)
+    float load_power;        // calculated: home consumption (kW), always positive
     float dailyEnergyYield;
     float accumulatedEnergy;
     float dailyRevenue;
-    float positiveActivePower;
-    float reverseActivePower;
+    float gridExportEnergy;  // reg 37119: cumulative kWh fed TO grid
+    float gridImportEnergy;  // reg 37121: cumulative kWh FROM grid
+    float dailyGridImport;   // calculated: kWh imported from grid today
 
     // PV details
     float pv1_voltage;
@@ -64,12 +66,14 @@ class InverterData {
         obj["meterStatus"] = meterStatus;
         obj["pv_power"] = pv_power;
         obj["grid_power"] = grid_power;
+        obj["load_power"] = load_power;
         obj["grid_code"] = grid_code;
         obj["dailyEnergyYield"] = dailyEnergyYield;
         obj["dailyRevenue"] = dailyRevenue;
         obj["accumulatedEnergy"] = accumulatedEnergy;
-        obj["positiveActivePower"] = positiveActivePower;
-        obj["reverseActivePower"] = reverseActivePower;
+        obj["gridExportEnergy"] = gridExportEnergy;
+        obj["gridImportEnergy"] = gridImportEnergy;
+        obj["dailyGridImport"] = dailyGridImport;
         obj["pv1_voltage"] = pv1_voltage;
         obj["pv1_current"] = pv1_current;
         obj["pv2_voltage"] = pv2_voltage;
