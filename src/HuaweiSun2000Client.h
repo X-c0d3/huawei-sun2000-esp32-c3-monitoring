@@ -224,12 +224,13 @@ class HuaweiSun2000Client {
             data.dailyEnergyYield = parseRegisterValue(32114, 2, 100.0f);
             data.dailyRevenue = data.dailyEnergyYield * float(ELECTRICITY_PRICE);
             data.accumulatedEnergy = parseRegisterValue(32106, 2, 100.0f);
-            data.positiveActivePower = parseRegisterValue(37119, 2, 100.0f);
-            data.reverseActivePower = parseRegisterValue(37121, 2, 100.0f);
+            data.gridExportEnergy = parseRegisterValue(37119, 2, 100.0f);  // cumulative kWh fed TO grid
+            data.gridImportEnergy = parseRegisterValue(37121, 2, 100.0f);  // cumulative kWh FROM grid
             data.pv1_voltage = parseRegisterValue(32016, 1, 10.0f);
             data.pv1_current = parseRegisterValue(32017, 1, 100.0f);
             data.pv2_voltage = parseRegisterValue(32018, 1, 10.0f);
             data.pv2_current = parseRegisterValue(32019, 1, 100.0f);
+            // pv3 available only for 3MPPT inverter, so we need to check if the register is available
             data.pv3_voltage = parseRegisterValue(32020, 1, 10.0f);
             data.pv3_current = parseRegisterValue(32021, 1, 100.0f);
 
@@ -256,8 +257,8 @@ class HuaweiSun2000Client {
             // data.dailyEnergyYield = randomFloat(1.0f, 25.6f);
             // data.dailyRevenue = data.dailyEnergyYield * float(ELECTRICITY_PRICE);
             // data.accumulatedEnergy = 204400.0f;
-            // data.positiveActivePower = 3400.0f;
-            // data.reverseActivePower = 2342.0f;
+            // data.gridExportEnergy = 3400.0f;
+            // data.gridImportEnergy = 2342.0f;
             // data.pv1_voltage = randomFloat(220.0f, 400.0f);
             // data.pv1_current = randomFloat(2.0f, 15.0f);
             // data.pv2_voltage = randomFloat(220.0f, 400.0f);
