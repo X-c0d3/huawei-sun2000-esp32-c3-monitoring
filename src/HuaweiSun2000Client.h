@@ -266,6 +266,11 @@ class HuaweiSun2000Client {
             // data.pv3_voltage = 0;  // randomFloat(220.0f, 400.0f);
             // data.pv3_current = randomFloat(2.0f, 15.0f);
 
+            // All registers read without throwing — data is trustworthy.
+            // If any parseRegisterValue above failed it threw std::runtime_error
+            // and we jumped to catch, leaving data.valid = false.
+            data.valid = true;
+
             unsigned long elapsedTime = micros() - startTime;
             Serial.print(">>> GetModBusData ElapsedTime: ");
             Serial.println(formatDuration(elapsedTime));

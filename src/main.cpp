@@ -171,6 +171,16 @@ bool getDeviceInfo(void*) {
     try {
         InverterData obj = inverter.getDeviceInfo();
 
+        // Bad/partial Modbus read: skip this cycle entirely. Do NOT touch the
+        // daily baseline, the screen, or publish — otherwise garbage/zeroed
+        // values would corrupt the HA utility_meter (a drop-then-rise on a
+        // total_increasing sensor is counted as a huge consumption spike) and
+        // could reset the daily grid-import baseline to a wrong value.
+        if (!obj.valid) {
+            Serial.println("-- Skipped: invalid inverter read (keeping last good data)");
+            return true;  // keep the timer running for the next attempt
+        }
+
         // --- Daily grid import calculation ---
         {
             time_t now = time(nullptr);
