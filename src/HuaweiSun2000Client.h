@@ -25,6 +25,64 @@ class HuaweiSun2000Client {
     uint32_t baudRate = 0;
     uint16_t regBuffer[125];
 
+    // Last accepted cumulative energy counters (-1 = none yet, e.g. right after boot).
+    float lastImportEnergy = -1;
+    float lastExportEnergy = -1;
+    float lastYieldEnergy = -1;
+    unsigned long lastEnergyMillis = 0;
+
+    // Huawei's "value unavailable" markers: U32 (e.g. 32106) uses 0xFFFFFFFF, I32 (37119/37121) uses 0x7FFFFFFF.
+    static constexpr uint32_t U32_NO_DATA = 0xFFFFFFFF;
+    static constexpr uint32_t I32_NO_DATA = 0x7FFFFFFF;
+
+    static bool isPlausibleIncrease(float last, float now, float maxDelta) {
+        return now >= last - 0.01f && now - last <= maxDelta;  // 0.01 = one register step (gain 100)
+    }
+
+    // Cumulative energy counter: 32-bit, gain 100, kWh. Never legitimately equals either no-data marker.
+    float parseEnergyRegister(uint16_t address) {
+        if (!readHoldingRegisters(address, 2)) {
+            throw std::runtime_error("Modbus read failed");
+        }
+        uint32_t raw = ((uint32_t)regBuffer[0] << 16) | regBuffer[1];
+        if (raw == U32_NO_DATA || raw == I32_NO_DATA) {
+            Serial.printf("Energy register %d returned no-data (0x%08X)\n", address, raw);
+            throw std::runtime_error("Energy register returned no-data");
+        }
+        return raw / 100.0f;
+    }
+
+    // During a grid outage the power meter loses power while the inverter (fed from PV) still answers
+    // Modbus: the read succeeds but meter/energy registers come back as 0 or 0xFFFFFFFF. Publishing
+    // those makes HA's total_increasing + utility_meter count the jump back as consumption.
+    void validateEnergyCounters(const InverterData& data, bool meterOnline) {
+        if (!meterOnline) {
+            throw std::runtime_error("Power meter offline (grid outage?)");
+        }
+        // Export may legitimately stay 0 on zero-export systems; import and PV yield never do on a running system.
+        if (data.gridImportEnergy <= 0 || data.accumulatedEnergy <= 0) {
+            throw std::runtime_error("Energy register returned 0");
+        }
+
+        if (lastImportEnergy >= 0) {
+            float hours = (millis() - lastEnergyMillis) / 3600000.0f;
+            float maxDelta = MAX_PLAUSIBLE_POWER_KW * hours + 1.0f;  // +1 kWh slack for short intervals
+            if (!isPlausibleIncrease(lastImportEnergy, data.gridImportEnergy, maxDelta) ||
+                !isPlausibleIncrease(lastExportEnergy, data.gridExportEnergy, maxDelta) ||
+                !isPlausibleIncrease(lastYieldEnergy, data.accumulatedEnergy, maxDelta)) {
+                Serial.printf("Rejected energy jump: import %.2f -> %.2f, export %.2f -> %.2f, yield %.2f -> %.2f\n",
+                              lastImportEnergy, data.gridImportEnergy, lastExportEnergy, data.gridExportEnergy,
+                              lastYieldEnergy, data.accumulatedEnergy);
+                throw std::runtime_error("Energy counter decreased or jumped implausibly");
+            }
+        }
+
+        lastImportEnergy = data.gridImportEnergy;
+        lastExportEnergy = data.gridExportEnergy;
+        lastYieldEnergy = data.accumulatedEnergy;
+        lastEnergyMillis = millis();
+    }
+
     // Field-tested against a real Smart Dongle: the very first Modbus
     // request right after a fresh TCP connect (or after the dongle has been
     // idle) almost always times out, even though the connection itself is
@@ -216,16 +274,17 @@ class HuaweiSun2000Client {
             data.efficiency = parseRegisterValue(32086, 1, 100.0f);
             data.temperature = parseRegisterValue(32087, 1, 10.0f);
             data.meterType = parseRegisterValue(37125, 2, 1.0f) == 0 ? "Single-phase" : "Three-phase";
-            data.meterStatus = parseRegisterValue(37100, 1, 1.0f) == 0 ? "Offline" : "Normal";
+            bool meterOnline = parseRegisterValue(37100, 1, 1.0f) != 0;
+            data.meterStatus = meterOnline ? "Normal" : "Offline";
             data.pv_power = parseRegisterValue(32064, 2, 1000.0f);
             data.grid_power = parseRegisterValue(37113, 2, 1000.0f, true);
             data.load_power = data.pv_power + data.grid_power;
             data.grid_code = getGridCode(parseRegisterValue(42000, 1, 1));
             data.dailyEnergyYield = parseRegisterValue(32114, 2, 100.0f);
             data.dailyRevenue = data.dailyEnergyYield * float(ELECTRICITY_PRICE);
-            data.accumulatedEnergy = parseRegisterValue(32106, 2, 100.0f);
-            data.gridExportEnergy = parseRegisterValue(37119, 2, 100.0f);  // cumulative kWh fed TO grid
-            data.gridImportEnergy = parseRegisterValue(37121, 2, 100.0f);  // cumulative kWh FROM grid
+            data.accumulatedEnergy = parseEnergyRegister(32106);
+            data.gridExportEnergy = parseEnergyRegister(37119);  // cumulative kWh fed TO grid
+            data.gridImportEnergy = parseEnergyRegister(37121);  // cumulative kWh FROM grid
             data.pv1_voltage = parseRegisterValue(32016, 1, 10.0f);
             data.pv1_current = parseRegisterValue(32017, 1, 100.0f);
             data.pv2_voltage = parseRegisterValue(32018, 1, 10.0f);
@@ -266,9 +325,11 @@ class HuaweiSun2000Client {
             // data.pv3_voltage = 0;  // randomFloat(220.0f, 400.0f);
             // data.pv3_current = randomFloat(2.0f, 15.0f);
 
+            validateEnergyCounters(data, meterOnline);
+
             // All registers read without throwing — data is trustworthy.
-            // If any parseRegisterValue above failed it threw std::runtime_error
-            // and we jumped to catch, leaving data.valid = false.
+            // If any parseRegisterValue above failed (or validateEnergyCounters rejected the
+            // values) it threw std::runtime_error and we jumped to catch, leaving data.valid = false.
             data.valid = true;
 
             unsigned long elapsedTime = micros() - startTime;

@@ -183,12 +183,14 @@ bool getDeviceInfo(void*) {
 
         // --- Daily grid import calculation ---
         {
-            time_t now = time(nullptr);
-            struct tm* t = localtime(&now);
-            if (t->tm_mday != lastResetDay) {
+            struct tm now;
+            // getLocalTime() is false until NTP has synced. After a power-loss reboot the clock reads 1970
+            // (setupTimeZone() doesn't wait for NTP), so don't set a baseline on that.
+            bool timeSynced = getLocalTime(&now, 0);
+            if (timeSynced && now.tm_mday != lastResetDay) {
                 // New day: reset baseline at first reading after midnight
                 gridImportBaseline = obj.gridImportEnergy;
-                lastResetDay = t->tm_mday;
+                lastResetDay = now.tm_mday;
                 Serial.printf("Daily grid import baseline reset: %.2f kWh\n", gridImportBaseline);
             }
             obj.dailyGridImport = (gridImportBaseline >= 0)

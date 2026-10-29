@@ -10,5 +10,6 @@
         "vector": "cpp",
         "initializer_list": "cpp",
         "*.tcc": "cpp"
-    }
+    },
+    "cmake.sourceDirectory": "/Users/x-c0d3/Desktop/DEV/Arduino/huawei-sun2000-esp32/lib/TFT_eSPI"
 }
