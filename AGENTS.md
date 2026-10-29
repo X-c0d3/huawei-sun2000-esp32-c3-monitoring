@@ -62,14 +62,39 @@ ESP32-C3 อ่านค่าจาก Huawei SUN2000 ผ่าน Modbus แ�
   - `gridImportEnergy <= 0` หรือ `accumulatedEnergy <= 0` (ไม่เช็ค export เพราะระบบ zero-export อาจเป็น 0 จริง)
   - ค่าสะสมตัวใดลดลงจากค่าดีล่าสุด หรือเพิ่มเร็วกว่า `MAX_PLAUSIBLE_POWER_KW` (ใน `settings.h`) ตามเวลาที่ผ่านไป
 
-ใน `src/main.cpp`: ไม่ตั้ง baseline ของ `dailyGridImport` จนกว่า NTP จะ sync เช็คด้วย `getLocalTime(&now, 0)` ของ ESP32 framework (คืน `false` จนกว่าเวลาจะถูกตั้ง) ห้าม hardcode ปีเพื่อเช็คเอง
-- เหตุผล: `setupTimeZone()` ใน `src/utility.h` รอ NTP ด้วย `while (!time(nullptr))` แต่ `time()` คืนวินาทีนับจากบูตซึ่งไม่ใช่ 0 ลูปจึงไม่ได้รอจริง หลังไฟดับแล้วรีบูต รอบแรก ๆ นาฬิกาจะเป็นปี 1970
+ใน `src/main.cpp`: ไม่ตั้ง baseline ของ `dailyGridImport` จนกว่า NTP จะ sync (ดูหัวข้อ `dailyGridImport` ด้านล่าง) การแก้นี้เป็นเรื่องรอง ไม่เกี่ยวกับยอดหลายสิบล้าน kWh ใน HA
 
 ### ข้อจำกัดที่รู้อยู่
 - ระบบที่ไม่มีมิเตอร์ (37100 = 0 ตลอด) จะถูกข้ามทุกรอบ ทั้ง 2 เครื่องในโปรเจกต์นี้มีมิเตอร์
 - "ค่าดีล่าสุด" เก็บใน RAM หลังรีบูตค่าแรกจะถูกเช็คแค่ sentinel, 0 และสถานะมิเตอร์
-- `dailyGridImport` จะเริ่มนับใหม่จากตอนรีบูต (baseline อยู่ใน RAM)
 - ยังไม่ได้ทดสอบกับไฟดับจริง เมื่อเกิดขึ้น Serial Monitor ควรแสดง `-- Skipped: invalid inverter read` พร้อมสาเหตุ
+
+## `dailyGridImport` (คำนวณใน ESP32)
+
+inverter มี "PV ผลิตวันนี้" (32114 → `dailyEnergyYield`) แต่ไม่มี "ซื้อไฟวันนี้" มีแค่ยอดซื้อสะสม (37121 → `gridImportEnergy`) `main.cpp` จึงคำนวณเอง:
+
+```
+รอบแรกของวันใหม่: gridImportBaseline = gridImportEnergy
+ทุกรอบ:           dailyGridImport = gridImportEnergy − gridImportBaseline
+```
+
+- ผู้ใช้ field นี้: payload JSON กับ Serial log เท่านั้น ไม่ได้แสดงบนจอ TFT และ **Bill Energy Card ไม่ได้ใช้** (HA คำนวณยอดรายวันเองจาก `gridImportEnergy` ผ่าน `utility_meter`)
+- ห้ามลบ field นี้ แม้จะมีคนใช้น้อย เพราะเป็นส่วนหนึ่งของ response object
+
+### การเช็ค NTP sync
+"วันใหม่" ตัดสินจาก `tm_mday` จึงต้องใช้วันที่ที่ถูกต้อง โค้ดเช็คด้วย `getLocalTime(&now, 0)` ของ ESP32 framework (คืน `false` จนกว่าเวลาจะถูกตั้ง) **ห้าม hardcode ปี**เพื่อเช็คเอง
+
+ทำไมต้องเช็ค: `setupTimeZone()` ใน `src/utility.h` รอ NTP ด้วย `while (!time(nullptr))` แต่ `time()` คืนวินาทีนับจากบูตซึ่งไม่ใช่ 0 ลูปจึง**ไม่ได้รอจริง** หลังไฟดับ router/ONT ก็บูตใหม่ด้วย เน็ตอาจหายไปหลายนาที ระหว่างนั้นนาฬิกา ESP32 เดินจาก 1 ม.ค. 1970 และ poll ทุก 3 วินาที
+
+| กรณี | ถ้าไม่เช็ค | เมื่อเช็ค |
+|---|---|---|
+| เน็ตกลับมาเร็ว | ตั้ง baseline 2 ครั้ง (ตอน 1970 และตอน sync) ค่าแทบเท่ากัน แทบไม่เสียหาย | ตั้งครั้งเดียวตอนวันที่ถูก |
+| เน็ตล่มนาน | นาฬิกา 1970 ข้ามเที่ยงคืนผิดเวลา `dailyGridImport` reset กลางวันแบบสุ่ม | ไม่ตั้ง baseline จนกว่าเวลาจะถูก ค่าเป็น 0 ไปก่อน |
+
+สิ่งที่การเช็คนี้**ไม่ได้**กัน:
+- ESP32 รีบูตกลางวันแล้ว `dailyGridImport` เริ่มนับใหม่ เพราะ baseline อยู่ใน RAM
+- `lastUpdated` ใน payload (จาก `DateNowString()`) ยังเป็นปี 1970 ในช่วงที่ยังไม่ sync
+- `setupTimeZone()` ยังไม่ได้แก้ให้รอ NTP จริง โดยตั้งใจ: ถ้ารอจริงแล้วเน็ตล่ม ESP32 จะค้างตอนบูต
 
 ## ฝั่ง Home Assistant
 
